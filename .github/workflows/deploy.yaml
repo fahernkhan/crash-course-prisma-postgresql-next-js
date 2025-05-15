@@ -22,10 +22,11 @@ jobs:
             mkdir -p ~/shoe-store
             cd ~/shoe-store
             
-            # 1. Copy file langsung dari repo
-            cp $GITHUB_WORKSPACE/docker-compose.prod.yaml .
+            # 1. Sync file menggunakan rsync
+            echo "File sebelum sync:"
+            ls -la
             
-            # 2. Gunakan nama file yang benar
+            # 2. Rename file yang sudah di-sync
             mv docker-compose.prod.yaml docker-compose.yml
             
             # 3. Setup environment
@@ -36,11 +37,18 @@ jobs:
             docker-compose -f docker-compose.yml down
             docker-compose -f docker-compose.yml up -d
             
-            # 5. Tunggu database ready
-            sleep 15
+            # 5. Tunggu database ready dengan healthcheck
+            for i in {1..10}; do
+              docker-compose -f docker-compose.yml exec postgres pg_isready -U $DB_USER && break
+              sleep 5
+            done
+            
+            # 6. Jalankan migrasi
             docker-compose -f docker-compose.yml exec app npx prisma migrate deploy
           envs: |
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            GITHUB_WORKSPACE=/github/workspace
           sync: true
+          rsync_options: |
+            --include=docker-compose.prod.yaml
+            --exclude=*
