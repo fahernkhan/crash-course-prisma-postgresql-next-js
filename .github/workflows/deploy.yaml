@@ -10,7 +10,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4  # Langkah ini akan mengambil semua file repo
       
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -19,17 +19,17 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            # 1. Buat direktori tujuan
+            # 1. Buat direktori dan masuk
             mkdir -p ~/shoe-store
             cd ~/shoe-store
             
-            # 2. Sync file menggunakan mekanisme resmi
-            echo "File yang di-sync:"
-            ls -la
+            # 2. Copy file langsung dari repo yang sudah di-checkout
+            echo "Memindahkan file docker-compose..."
+            cp /github/workspace/docker-compose.prod.yaml .
             
-            # 3. Validasi file compose
+            # 3. Validasi file
             if [ ! -f "docker-compose.prod.yaml" ]; then
-              echo "Error: File docker-compose.prod.yaml tidak ada!"
+              echo "Error: File docker-compose tidak ditemukan!"
               echo "Isi direktori:"
               ls -la
               exit 1
@@ -43,9 +43,9 @@ jobs:
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             
             # 6. Jalankan docker-compose
-            docker-compose -f docker-compose.yml up -d
+            docker-compose up -d
             
-            # 7. Tunggu database siap
+            # 7. Tunggu database ready dengan healthcheck
             for i in {1..12}; do
               docker-compose exec postgres pg_isready -U $DB_USER && break
               sleep 5
@@ -53,10 +53,10 @@ jobs:
             
             # 8. Jalankan migrasi
             docker-compose exec app npx prisma migrate deploy
+            
+            # 9. Debug akhir
+            echo "Deploy selesai. Status container:"
+            docker-compose ps
           envs: |
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          sync: true
-          sync_options: |
-            --include=docker-compose.prod.yaml
-            --exclude=*
