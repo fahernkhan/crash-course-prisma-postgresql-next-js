@@ -10,7 +10,7 @@ services:
       - pg_data:/var/lib/postgresql/data
   
   app:
-    image: ${DOCKERHUB_USERNAME}/shoe-store:latest
+    image: ${{ secrets.DOCKERHUB_USERNAME }}/shoe-store:latest
     ports:
       - "3000:3000"
     environment:
