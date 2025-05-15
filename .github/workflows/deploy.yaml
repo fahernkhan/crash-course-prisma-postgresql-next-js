@@ -45,12 +45,12 @@ jobs:
 
             # Tunggu database siap
             for i in {1..12}; do
-              docker-compose exec postgres pg_isready -U ${{ secrets.DB_USER }} && break
+              docker-compose exec -T postgres pg_isready -U ${{ secrets.DB_USER }} && break
               sleep 5
             done
 
             # Jalankan migrasi Prisma
-            docker-compose exec app npx prisma migrate deploy
+            docker-compose exec -T app npx prisma migrate deploy
 
             # Debug container
             docker-compose ps
