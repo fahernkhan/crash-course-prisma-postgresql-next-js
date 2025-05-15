@@ -1,27 +1,33 @@
-name: Deploy to EC2
+name: Deploy to Production
 
 on:
-  workflow_dispatch:
-
-env:
-  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/shoe-store
-  SSH_HOST: ${{ secrets.AWS_EC2_IP }}
-  SSH_USER: ubuntu
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types:
+      - completed
+  workflow_dispatch:  # Memungkinkan trigger manual
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
-      - name: Deploy to EC2 via SSH
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ env.SSH_HOST }}
-          username: ${{ env.SSH_USER }}
-          key: ${{ secrets.AWS_SSH_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/shoe-store
             docker-compose down
             docker pull ${{ env.DOCKER_IMAGE }}:latest
             docker-compose up -d
+            sleep 10  # Beri waktu untuk database startup
             docker-compose exec app npx prisma migrate deploy
+          envs: DOCKER_IMAGE
+          sync: true
+          sync_options: --delete
