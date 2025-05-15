@@ -19,36 +19,51 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
+            # 1. Buat direktori dan masuk
             mkdir -p ~/shoe-store
             cd ~/shoe-store
             
-            # 1. Sync file menggunakan rsync
-            echo "File sebelum sync:"
+            # 2. Sync file dari repo ke server
+            echo "Isi direktori sebelum sync:"
             ls -la
             
-            # 2. Rename file yang sudah di-sync
-            mv docker-compose.prod.yaml docker-compose.yml
+            # 3. Salin file compose dari repo
+            cp $GITHUB_WORKSPACE/docker-compose.prod.yaml .
             
-            # 3. Setup environment
+            # 4. Rename file dengan validasi
+            if [ -f "docker-compose.prod.yaml" ]; then
+              mv docker-compose.prod.yaml docker-compose.yml
+              echo "File renamed successfully"
+            else
+              echo "Error: docker-compose.prod.yaml not found!"
+              exit 1
+            fi
+            
+            # 5. Setup environment variables
             echo "DB_USER=$DB_USER" > .env
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             
-            # 4. Jalankan docker dengan config eksplisit
+            # 6. Tampilkan debug info
+            echo "Isi direktori setelah setup:"
+            ls -la
+            echo "Isi .env:"
+            cat .env
+            
+            # 7. Jalankan docker-compose
             docker-compose -f docker-compose.yml down
             docker-compose -f docker-compose.yml up -d
             
-            # 5. Tunggu database ready dengan healthcheck
-            for i in {1..10}; do
-              docker-compose -f docker-compose.yml exec postgres pg_isready -U $DB_USER && break
-              sleep 5
-            done
+            # 8. Tunggu database siap dengan timeout 60 detik
+            timeout 60s bash -c 'until docker-compose -f docker-compose.yml exec postgres pg_isready -U $DB_USER; do sleep 5; done'
             
-            # 6. Jalankan migrasi
+            # 9. Jalankan migrasi database
             docker-compose -f docker-compose.yml exec app npx prisma migrate deploy
+            
+            # 10. Verifikasi hasil
+            echo "Status container:"
+            docker-compose -f docker-compose.yml ps
           envs: |
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            GITHUB_WORKSPACE=/github/workspace
           sync: true
-          rsync_options: |
-            --include=docker-compose.prod.yaml
-            --exclude=*
