@@ -3,21 +3,28 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15.3
+    env_file: .env
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=shoes_store
     volumes:
       - pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   app:
     image: fahernkhan/shoe-store:latest
     ports:
-      - "3000:3000"
+      - "80:3000"
+    env_file: .env
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shoes_store
     depends_on:
       - postgres
+    networks:
+      - app-network
 
 volumes:
   pg_data:
+
+networks:
+  app-network:

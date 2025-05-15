@@ -1,23 +1,34 @@
-version: '3.8'
+name: Deploy to EC2
 
-services:
-  postgres:
-    image: postgres:15.3
-    environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=shoes_store
-    volumes:
-      - pg_data:/var/lib/postgresql/data
+on:
+  workflow_run:
+    workflows: ["Build & Push"]
+    types: [completed]
+  workflow_dispatch:
 
-  app:
-    image: fahernkhan/shoe-store:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shoes_store
-    depends_on:
-      - postgres
-
-volumes:
-  pg_data:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AWS_EC2_IP }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            mkdir -p ~/shoe-store
+            cp docker-compose.prod.yaml ~/shoe-store/
+            cd ~/shoe-store
+            echo "DB_USER=$DB_USER" > .env
+            echo "DB_PASSWORD=$DB_PASSWORD" >> .env
+            docker-compose down
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shoe-store:latest
+            docker-compose up -d
+            sleep 10
+            docker-compose exec app npx prisma migrate deploy
+          envs: |
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
