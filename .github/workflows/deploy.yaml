@@ -1,0 +1,27 @@
+name: Deploy to EC2
+
+on:
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: your-dockerhub-username/shoe-store
+  SSH_HOST: ${{ secrets.AWS_EC2_IP }}
+  SSH_USER: ubuntu
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            docker-compose down
+            cd /home/ubuntu/shoe-store
+            docker pull ${{ env.DOCKER_IMAGE }}:latest
+            docker-compose up -d
+            docker-compose exec app npx prisma migrate deploy
