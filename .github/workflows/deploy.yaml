@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: your-dockerhub-username/shoe-store
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/shoe-store
   SSH_HOST: ${{ secrets.AWS_EC2_IP }}
   SSH_USER: ubuntu
 
