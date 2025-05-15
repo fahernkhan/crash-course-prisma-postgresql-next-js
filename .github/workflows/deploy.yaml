@@ -21,21 +21,26 @@ jobs:
           script: |
             mkdir -p ~/shoe-store
             cd ~/shoe-store
-            # Copy file docker-compose dari repo ke server
-            cp /github/workspace/docker-compose.prod.yaml .
-            # Rename file agar dikenali docker-compose
-            mv docker-compose.prod.yaml docker-compose.yaml
+            
+            # 1. Copy file langsung dari repo
+            cp $GITHUB_WORKSPACE/docker-compose.prod.yaml .
+            
+            # 2. Gunakan nama file yang benar
+            mv docker-compose.prod.yaml docker-compose.yml
+            
+            # 3. Setup environment
             echo "DB_USER=$DB_USER" > .env
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
-            docker-compose down
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/shoe-store:latest
-            docker-compose up -d
-            sleep 10
-            docker-compose exec app npx prisma migrate deploy
+            
+            # 4. Jalankan docker dengan config eksplisit
+            docker-compose -f docker-compose.yml down
+            docker-compose -f docker-compose.yml up -d
+            
+            # 5. Tunggu database ready
+            sleep 15
+            docker-compose -f docker-compose.yml exec app npx prisma migrate deploy
           envs: |
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            GITHUB_WORKSPACE=/github/workspace
           sync: true
-          sync_options: |
-            --exclude=.git
-            --exclude=node_modules
