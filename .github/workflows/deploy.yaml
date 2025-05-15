@@ -38,6 +38,7 @@ jobs:
             # Setup environment variables
             echo "DB_USER=${{ secrets.DB_USER }}" > .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
 
             # Jalankan docker-compose
             docker-compose up -d
