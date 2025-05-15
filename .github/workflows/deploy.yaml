@@ -20,8 +20,8 @@ jobs:
           username: ${{ env.SSH_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            docker-compose down
             cd /home/ubuntu/shoe-store
+            docker-compose down
             docker pull ${{ env.DOCKER_IMAGE }}:latest
             docker-compose up -d
             docker-compose exec app npx prisma migrate deploy
