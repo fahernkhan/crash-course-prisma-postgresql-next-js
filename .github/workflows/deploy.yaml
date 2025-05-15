@@ -20,8 +20,11 @@ jobs:
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
             mkdir -p ~/shoe-store
-            cp docker-compose.prod.yaml ~/shoe-store/
             cd ~/shoe-store
+            # Copy file docker-compose dari repo ke server
+            cp /github/workspace/docker-compose.prod.yaml .
+            # Rename file agar dikenali docker-compose
+            mv docker-compose.prod.yaml docker-compose.yaml
             echo "DB_USER=$DB_USER" > .env
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             docker-compose down
@@ -32,3 +35,7 @@ jobs:
           envs: |
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          sync: true
+          sync_options: |
+            --exclude=.git
+            --exclude=node_modules
